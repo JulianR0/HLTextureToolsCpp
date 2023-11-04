@@ -92,7 +92,7 @@ bool System::OnInit()
 	return true;
 }
 
-MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools")
+MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxDefaultPosition, wxSize(960, 544))
 {
 	wxMenu *menuFile = new wxMenu;
 	menuFile->Append(wxID_OPEN);
@@ -127,6 +127,7 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools")
 
 	CreateStatusBar(1, wxSTB_SIZEGRIP, wxID_ANY);
 	SetStatusText("Ready");
+	Center(wxBOTH);
 }
 
 void MainForm::OnExit(wxCommandEvent& event)
