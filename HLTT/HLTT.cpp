@@ -34,6 +34,7 @@ public:
 	UINT32 lastSpriteFrame;
 
 	void OnPaint(wxPaintEvent& event);
+	void OnResize(wxSizeEvent& event);
 	void Tick(wxTimerEvent& event);
 
 	DECLARE_EVENT_TABLE();
@@ -49,6 +50,7 @@ ImageBox::ImageBox(wxFrame* parent) : wxPanel(parent)
 BEGIN_EVENT_TABLE(ImageBox, wxPanel)
 EVT_PAINT(ImageBox::OnPaint)
 EVT_TIMER(ANIMATE_EVENT_ID, ImageBox::Tick)
+EVT_SIZE(ImageBox::OnResize)
 END_EVENT_TABLE()
 
 enum // WindowID
@@ -230,9 +232,15 @@ void ImageBox::OnPaint(wxPaintEvent& event)
 	{
 		if (lumpImage->IsOk())
 		{
-			dc.DrawBitmap(*lumpImage, 0, 0);
+			// calculate center
+			wxSize screenSize = GetClientSize();
+			int X = (screenSize.GetWidth() / 2) - (lumpImage->GetWidth() / 2);
+			int Y = (screenSize.GetHeight() / 2) - (lumpImage->GetHeight() / 2);
+			dc.DrawBitmap(*lumpImage, X, Y);
 		}
 	}
+
+	event.Skip();
 }
 
 void ImageBox::Tick(wxTimerEvent& event)
@@ -244,4 +252,12 @@ void ImageBox::Tick(wxTimerEvent& event)
 
 	lumpImage = spriteImage[lastSpriteFrame].Image;
 	Refresh();
+
+	event.Skip();
+}
+
+void ImageBox::OnResize(wxSizeEvent& event)
+{
+	Refresh();
+	event.Skip();
 }
