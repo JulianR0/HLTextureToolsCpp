@@ -69,6 +69,6 @@ public:
 	SprHeader SpriteHeader;
 	std::string Filename;
 
-	std::vector<Frame> LoadFile(std::string filePath, bool transparent = false);
+	std::vector<Frame> LoadFile(std::string filePath, bool transparent);
 	void Close();
 };

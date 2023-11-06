@@ -61,7 +61,8 @@ enum // WindowID
 
 enum // MenuID
 {
-	MENU_Animate = 20
+	MENU_Animate = 20,
+	MENU_Transparent
 };
 
 enum HLFileType
@@ -78,6 +79,9 @@ public:
 	ImageBox *imageBox;
 
 	wxMenu *menuImage;
+	wxMenu *menuSettings;
+
+	bool drawTransparent;
 	MainForm();
 
 private:
@@ -85,6 +89,7 @@ private:
 	void OnExit(wxCommandEvent& event);
 	void ListBoxChanged(wxCommandEvent& event);
 	void AnimateSprite(wxCommandEvent& event);
+	void ToggleTransparency(wxCommandEvent& event);
 };
 
 bool System::OnInit()
@@ -102,17 +107,25 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxD
 	menuFile->Append(wxID_EXIT);
 	
 	menuImage = new wxMenu;
-	menuImage->Append(MENU_Animate, "Animation Play/Stop\tF5", "BLAH!");
+	menuImage->Append(MENU_Animate, "Animation Play/Stop\tF5", "Animate the sprite");
+	menuImage->Enable(MENU_Animate, false);
+
+	menuSettings = new wxMenu;
+	menuSettings->Append(MENU_Transparent, "Transparent textures", "Enable transparency for textures and sprites", wxITEM_CHECK);
+	menuSettings->Check(MENU_Transparent, true);
+	drawTransparent = true;
 
 	wxMenuBar *menuBar = new wxMenuBar;
 	menuBar->Append(menuFile, "File");
 	menuBar->Append(menuImage, "Image");
+	menuBar->Append(menuSettings, "Settings");
 
 	SetMenuBar(menuBar);
 
 	Bind(wxEVT_MENU, &MainForm::OnOpen, this, wxID_OPEN);
 	Bind(wxEVT_MENU, &MainForm::OnExit, this, wxID_EXIT);
 	Bind(wxEVT_MENU, &MainForm::AnimateSprite, this, MENU_Animate);
+	Bind(wxEVT_MENU, &MainForm::ToggleTransparency, this, MENU_Transparent);
 
 	//wxPanel *mainPanel = new wxPanel(this);
 	wxBoxSizer *mainSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -170,6 +183,7 @@ void MainForm::OnOpen(wxCommandEvent& event)
 	if (isWAD && g_WAD.LoadFile(openDialog.GetPath().utf8_string()))
 	{
 		fileType = FILE_Wad;
+		menuImage->Enable(MENU_Animate, false);
 		g_WAD.LoadLumps();
 
 		for (UINT32 i = 0; i < g_WAD.LumpsInfo.size(); i++)
@@ -180,7 +194,8 @@ void MainForm::OnOpen(wxCommandEvent& event)
 	else if (isSPR)
 	{
 		fileType = FILE_Sprite;
-		imageBox->spriteImage = g_SPR.LoadFile(openDialog.GetPath().utf8_string());
+		menuImage->Enable(MENU_Animate, true);
+		imageBox->spriteImage = g_SPR.LoadFile(openDialog.GetPath().utf8_string(), drawTransparent);
 
 		for (UINT32 i = 0; i < imageBox->spriteImage.size(); i++)
 		{
@@ -198,7 +213,7 @@ void MainForm::ListBoxChanged(wxCommandEvent& event)
 		return;
 	
 	if (fileType == FILE_Wad)
-		imageBox->lumpImage = g_WAD.GetLumpImage((UINT32)event.GetSelection());
+		imageBox->lumpImage = g_WAD.GetLumpImage((UINT32)event.GetSelection(), drawTransparent);
 	else if (fileType == FILE_Sprite)
 	{
 		if (!imageBox->shouldAnimate)
@@ -222,6 +237,24 @@ void MainForm::AnimateSprite(wxCommandEvent& event)
 		else
 			imageBox->animateTimer->Stop();
 	}
+}
+
+void MainForm::ToggleTransparency(wxCommandEvent& event)
+{
+	drawTransparent = menuSettings->IsChecked(MENU_Transparent);
+
+	if (fileType == FILE_Wad && g_WAD.Filename.length() == 0 || fileType == FILE_Sprite && g_SPR.Filename.length() == 0)
+		return;
+
+	if (fileType == FILE_Wad)
+		imageBox->lumpImage = g_WAD.GetLumpImage(listBox->GetSelection(), drawTransparent);
+	else if (fileType == FILE_Sprite)
+	{
+		imageBox->spriteImage = g_SPR.LoadFile(g_SPR.Filename, drawTransparent);
+		imageBox->lumpImage = imageBox->spriteImage[listBox->GetSelection()].Image;
+	}
+
+	imageBox->Refresh();
 }
 
 void ImageBox::OnPaint(wxPaintEvent& event)

@@ -57,5 +57,5 @@ public:
 	void Close();
 
 	void LoadLumps();
-	wxBitmap *GetLumpImage(UINT32 index, bool transparent = false);
+	wxBitmap *GetLumpImage(UINT32 index, bool transparent);
 };

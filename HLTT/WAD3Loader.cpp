@@ -68,7 +68,7 @@ void WAD3Loader::LoadLumps()
 	}
 }
 
-wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent)
+wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent = false)
 {
 	if (index < LumpsInfo.size())
 	{
@@ -182,19 +182,20 @@ wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent)
 			
 			// Build image from pixel data
 #ifdef linux
-			wxImage lumpImage(width, height);
+			wxImage lumpImage(width, height); lumpImage.InitAlpha();
 			UINT32 P = 0;
 			for (UINT32 y = 0; y < height; y++)
 			{
 				for (UINT32 x = 0; x < width; x++)
 				{
 					lumpImage.SetRGB(x, y, red[pixels[P]], green[pixels[P]], blue[pixels[P]]);
+					lumpImage.SetAlpha(x, y, (transparent && LumpsInfo[index].Name[0] == '{' && pixels[P] == MaxPaletteColors - 1) ? 0 : 255);
 					P++;
 				}
 			}
 #endif
 #ifdef _WIN32
-			wxBitmap *lumpImage = new wxBitmap(width, height, 8);
+			wxBitmap *lumpImage = new wxBitmap(width, height, 32);
 			PixelData bmdata(*lumpImage);
 			PixelData::Iterator IBMD(bmdata); IBMD.Reset(bmdata);
 
@@ -207,6 +208,7 @@ wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent)
 					IBMD.Red() = red[pixels[P]];
 					IBMD.Green() = green[pixels[P]];
 					IBMD.Blue() = blue[pixels[P]];
+					IBMD.Alpha() = (transparent && LumpsInfo[index].Name[0] == '{' && pixels[P] == MaxPaletteColors - 1) ? 0 : 255;
 					P++;
 				}
 			}
@@ -219,7 +221,7 @@ wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent)
 			delete[] blue;
 
 #ifdef linux
-			return new wxBitmap(lumpImage, 8);
+			return new wxBitmap(lumpImage, 32);
 #endif
 #ifdef _WIN32
 			return lumpImage;

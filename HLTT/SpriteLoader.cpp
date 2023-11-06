@@ -1,6 +1,6 @@
 #include "SpriteLoader.h"
 
-std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent)
+std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent = false)
 {
 	Filename = filePath;
 
@@ -81,19 +81,20 @@ std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent
 
 		// Build image from image data
 #ifdef linux
-		wxImage frameImage(frameWidth, frameHeight);
+		wxImage frameImage(frameWidth, frameHeight); frameImage.InitAlpha();
 		UINT32 P = 0;
 		for (UINT32 y = 0; y < (UINT32)frameHeight; y++)
 		{
 			for (UINT32 x = 0; x < (UINT32)frameWidth; x++)
 			{
 				frameImage.SetRGB(x, y, red[pixels[P]], green[pixels[P]], blue[pixels[P]]);
+				frameImage.SetAlpha(x, y, (transparent && pixels[P] == u - 1 && SpriteHeader.TextFormat == SPR_ALPHATEST) ? 0 : 255);
 				P++;
 			}
 		}
 #endif
 #ifdef _WIN32
-		wxBitmap *frameImage = new wxBitmap(frameWidth, frameHeight, 8);
+		wxBitmap *frameImage = new wxBitmap(frameWidth, frameHeight, 32);
 		PixelData bmdata(*frameImage);
 		PixelData::Iterator IBMD(bmdata); IBMD.Reset(bmdata);
 
@@ -106,6 +107,7 @@ std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent
 				IBMD.Red() = red[pixels[P]];
 				IBMD.Green() = green[pixels[P]];
 				IBMD.Blue() = blue[pixels[P]];
+				IBMD.Alpha() = (transparent && pixels[P] == u - 1 && SpriteHeader.TextFormat == SPR_ALPHATEST) ? 0 : 255;
 				P++;
 			}
 		}
@@ -115,7 +117,7 @@ std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent
 		frame.OriginX = frameOriginX;
 		frame.OriginY = frameOriginY;
 #ifdef linux
-		frame.Image = new wxBitmap(frameImage, 8);
+		frame.Image = new wxBitmap(frameImage, 32);
 #endif
 #ifdef _WIN32
 		frame.Image = frameImage;
