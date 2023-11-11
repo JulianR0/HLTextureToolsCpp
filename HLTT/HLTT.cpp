@@ -13,6 +13,9 @@ WAD3Loader g_WAD;
 
 #include "SpriteLoader.h"
 SpriteLoader g_SPR;
+
+#include "ExtractWAD.h"
+
 const int ANIMATE_EVENT_ID = wxID_HIGHEST + 1;
 
 class System : public wxApp
@@ -62,7 +65,8 @@ enum // WindowID
 enum // MenuID
 {
 	MENU_Animate = 20,
-	MENU_Transparent
+	MENU_Transparent,
+	MENU_ExtractBSP
 };
 
 enum HLFileType
@@ -80,6 +84,7 @@ public:
 
 	wxMenu *menuImage;
 	wxMenu *menuSettings;
+	wxMenu *menuTools;
 
 	bool drawTransparent;
 	MainForm();
@@ -88,8 +93,15 @@ private:
 	void OnOpen(wxCommandEvent& event);
 	void OnExit(wxCommandEvent& event);
 	void ListBoxChanged(wxCommandEvent& event);
+	
+	// Image
 	void AnimateSprite(wxCommandEvent& event);
+	
+	// Settings
 	void ToggleTransparency(wxCommandEvent& event);
+	
+	// Tools
+	void ExtractFromBSP(wxCommandEvent& event);
 };
 
 bool System::OnInit()
@@ -114,18 +126,23 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxD
 	menuSettings->Append(MENU_Transparent, "Transparent textures", "Enable transparency for textures and sprites", wxITEM_CHECK);
 	menuSettings->Check(MENU_Transparent, true);
 	drawTransparent = true;
-
+	
+	menuTools = new wxMenu;
+	menuTools->Append(MENU_ExtractBSP, "Extract WAD from BSP", "Extract embedded textures from a BSP map");
+	
 	wxMenuBar *menuBar = new wxMenuBar;
 	menuBar->Append(menuFile, "File");
 	menuBar->Append(menuImage, "Image");
 	menuBar->Append(menuSettings, "Settings");
-
+	menuBar->Append(menuTools, "Tools");
+	
 	SetMenuBar(menuBar);
 
 	Bind(wxEVT_MENU, &MainForm::OnOpen, this, wxID_OPEN);
 	Bind(wxEVT_MENU, &MainForm::OnExit, this, wxID_EXIT);
 	Bind(wxEVT_MENU, &MainForm::AnimateSprite, this, MENU_Animate);
 	Bind(wxEVT_MENU, &MainForm::ToggleTransparency, this, MENU_Transparent);
+	Bind(wxEVT_MENU, &MainForm::ExtractFromBSP, this, MENU_ExtractBSP);
 
 	//wxPanel *mainPanel = new wxPanel(this);
 	wxBoxSizer *mainSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -255,6 +272,13 @@ void MainForm::ToggleTransparency(wxCommandEvent& event)
 	}
 
 	imageBox->Refresh();
+}
+
+void MainForm::ExtractFromBSP(wxCommandEvent& event)
+{
+	ExtractWADForm *form = new ExtractWADForm((wxFrame*)this, wxID_ANY, "Extract embedded WAD textures from BSP", wxDefaultPosition, wxSize(568, 300));
+	form->ShowModal();
+	//form->Destroy();
 }
 
 void ImageBox::OnPaint(wxPaintEvent& event)

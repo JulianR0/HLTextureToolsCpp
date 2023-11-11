@@ -5,6 +5,8 @@
 #include <wx/palette.h>
 #include <wx/rawbmp.h>
 
+#include "binaryIO.h"
+
 #ifdef linux
 #include "linux.h"
 #endif
@@ -26,6 +28,13 @@ struct WADLump
 	UINT32 FullLength;
 	UINT8 Type;
 	UINT8 Compression;
+	std::string Name;
+};
+
+struct IncludedBSPTexture
+{
+	UINT32 Offset;
+	UINT32 Size;
 	std::string Name;
 };
 
@@ -58,4 +67,5 @@ public:
 
 	void LoadLumps();
 	wxBitmap *GetLumpImage(UINT32 index, bool transparent);
+	int ExtractWADFromBSP(std::string inputFile, std::string outputFile);
 };

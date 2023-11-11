@@ -24,8 +24,8 @@ bool WAD3Loader::LoadFile(std::string filePath)
 		return false;
 	}
 
-	wadFile->Read(reinterpret_cast<char*>(&header.LumpCount), 4);
-	wadFile->Read(reinterpret_cast<char*>(&header.LumpOffset), 4);
+	header.LumpCount = BIN::ReadUInt32(wadFile);
+	header.LumpOffset = BIN::ReadUInt32(wadFile);
 
 	return true;
 }
@@ -39,17 +39,16 @@ void WAD3Loader::LoadLumps()
 	for (UINT32 i = 0; i < header.LumpCount; i++)
 	{
 		WADLump lump;
-		wadFile->Read(reinterpret_cast<char*>(&lump.Offset), 4); // ReadUInt32
-		wadFile->Read(reinterpret_cast<char*>(&lump.CompressedLength), 4);
-		wadFile->Read(reinterpret_cast<char*>(&lump.FullLength), 4);
-		wadFile->Read(reinterpret_cast<char*>(&lump.Type), 1); // ReadByte
-		wadFile->Read(reinterpret_cast<char*>(&lump.Compression), 1);
+		lump.Offset = BIN::ReadUInt32(wadFile);
+		lump.CompressedLength = BIN::ReadUInt32(wadFile);
+		lump.FullLength = BIN::ReadUInt32(wadFile);
+		lump.Type = BIN::ReadUInt8(wadFile); // ReadByte()
+		lump.Compression = BIN::ReadUInt8(wadFile); // ReadByte()
 
 		// Padding, 2-bytes
 		wadFile->SeekI(2, wxFromCurrent);
 
 		// GetNullTerminatedString()
-		//char temp[MaxNameLength]; // expression must have a constant value
 		char *temp = new char[MaxNameLength];
 		wadFile->Read(temp, MaxNameLength);
 		std::string chars(temp);
@@ -92,8 +91,8 @@ wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent = false)
 
 			// Read texture size
 			UINT32 width, height;
-			wadFile->Read(reinterpret_cast<char*>(&width), 4);
-			wadFile->Read(reinterpret_cast<char*>(&height), 4);
+			width = BIN::ReadUInt32(wadFile);
+			height = BIN::ReadUInt32(wadFile);
 
 			if (width > MaxTextureWidth || height > MaxTextureHeight)
 			{
@@ -120,8 +119,7 @@ wxBitmap *WAD3Loader::GetLumpImage(UINT32 index, bool transparent = false)
 			if (type == 0x40 || type == 0x43)
 			{
 				// Not used, but needed
-				UINT32 pixelOffset;
-				wadFile->Read(reinterpret_cast<char*>(&pixelOffset), 4);
+				UINT32 pixelOffset = BIN::ReadUInt32(wadFile);
 
 				// Skip MIPMAPS offsets, not needed
 				wadFile->SeekI(12, wxFromCurrent);
@@ -244,4 +242,172 @@ void WAD3Loader::Close()
 		delete wadFile;
 		wadFile = nullptr;
 	}
+}
+
+int WAD3Loader::ExtractWADFromBSP(std::string inputFile, std::string outputFile)
+{
+	bool foundEOF = false;
+	std::vector<IncludedBSPTexture> includedTextures;
+	
+	if (inputFile.rfind(".bsp") == std::string::npos)
+	{
+		wxMessageBox("Input file must be BSP!", "Error", wxOK | wxICON_ERROR);
+		return 0;
+	}
+	
+	wxFileInputStream *bspFile = new wxFileInputStream(inputFile);
+	if (!bspFile->IsOk())
+	{
+		wxMessageBox("Failed to open BSP file!", "Error", wxOK | wxICON_ERROR);
+		return 0;
+	}
+	
+	long bufferLen = bspFile->GetLength();
+	char *buffer = new char[bufferLen];
+	UINT8 num1[4], num2[4], num3[4], num4[4];
+	
+	bspFile->Read(buffer, bufferLen);
+	
+	int found = 0;
+	for (long i = 0; i < bufferLen; i++)
+	{
+		// where do these magic numbers come from?
+		if ((i + 19 + 16) > bufferLen) break;
+		
+		// Search pattern
+		UINT8 nullByte1 = buffer[i];
+		UINT8 nullByte2 = buffer[i + 1];
+		UINT8 firstNameByte = buffer[i + 2];
+		UINT8 secondNameByte = buffer[i + 3];
+		
+		// +15 bytes of name
+		UINT8 lastNameByte = buffer[i + 17];
+		
+		// can't scratch the feeling that this is a bad way of using memcpy
+		memcpy(num1, buffer + i + 18, 4); // 4 = sizeof(int)
+		memcpy(num2, buffer + i + 18 + 4, 4);
+		memcpy(num3, buffer + i + 18 + 4 * 2, 4);
+		memcpy(num4, buffer + i + 18 + 4 * 3, 4);
+		
+		// TODO: this should consider big endian.
+		// currently, Xash is the only engine capable of running HL on ARM machines (needs confirmation)
+		// this will only work on little endian machines for the time being.
+		// TODO: maybe move this to its own function, it looks ugly here.
+		int num1int = ((int)num1[3] << 24) | ((int)num1[2] << 16) | ((int)num1[1] << 8) | ((int)num1[0]); // width
+		int num2int = ((int)num2[3] << 24) | ((int)num2[2] << 16) | ((int)num2[1] << 8) | ((int)num2[0]); // height
+		int num3int = ((int)num3[3] << 24) | ((int)num3[2] << 16) | ((int)num3[1] << 8) | ((int)num3[0]); // > 0 for custom wad
+		int num4int = ((int)num4[3] << 24) | ((int)num4[2] << 16) | ((int)num4[1] << 8) | ((int)num4[0]); // > 0 for custom wad
+		
+		if (nullByte2 < 2 &&
+			firstNameByte > 32 && firstNameByte < 127 &&
+			secondNameByte > 32 && secondNameByte < 127 &&
+			lastNameByte == 0 &&
+			num1int > 0 && num1int < 1024 &&
+			num2int > 0 && num2int < 1024)
+		{
+			UINT32 textureOffset = (UINT32)i + 2;
+			//long textureOffsetAbsolute = textureOffset + i - bufferLen;
+			
+			if (num3int > 0 && num3int < bufferLen && num4int > 0 && num4int < bufferLen)
+			{
+				// Set previous texture size
+				if (includedTextures.size() > 0)
+				{
+					UINT32 offset = includedTextures[includedTextures.size() - 1].Offset;
+					includedTextures[includedTextures.size() - 1].Size = (UINT32)(textureOffset - offset);
+				}
+				
+				char *textureName = new char[MaxNameLength];
+				memcpy(textureName, buffer + (int)textureOffset, MaxNameLength);
+				std::string nameNulled(textureName);
+				nameNulled += '\0';
+				
+				IncludedBSPTexture texture;
+				texture.Offset = (UINT32)textureOffset;
+				texture.Size = 0;
+				texture.Name = nameNulled;
+				
+				includedTextures.push_back(texture);
+				
+				delete[] textureName;
+			}
+			else
+			{
+				if (includedTextures.size() > 0 && textureOffset > includedTextures[includedTextures.size() - 1].Offset)
+				{
+					UINT32 offset = includedTextures[includedTextures.size() - 1].Offset;
+					includedTextures[includedTextures.size() - 1].Size = (UINT32)(textureOffset - offset);
+					foundEOF = true;
+				}
+			}
+		}
+	}
+	
+	// Fix last texture size
+	if (includedTextures.size() < 1)
+	{
+		wxMessageBox("BSP contains no embedded textures!", "Nothing found!", wxOK | wxICON_WARNING);
+		return 0;
+	}
+	
+	if (includedTextures[includedTextures.size() - 1].Size == 0 && !foundEOF)
+	{
+		UINT32 offset = includedTextures[includedTextures.size() - 1].Offset;
+		includedTextures[includedTextures.size() - 1].Size = (UINT32)(bufferLen - offset);
+	}
+	
+	// Extract textures to single WAD
+	wxFileOutputStream *wadFile = new wxFileOutputStream(outputFile);
+	if (!wadFile->IsOk())
+	{
+		wxMessageBox("Failed to write WAD file!", "Error", wxOK | wxICON_ERROR);
+		return 0;
+	}
+	
+	wadFile->Write(WadHeaderId.c_str(), WadHeaderId.length());
+	BIN::WriteUInt32(wadFile, includedTextures.size());
+	BIN::WriteUInt32(wadFile, 0); // offset lumps, later changed
+	
+	UINT32 *outputWadOffsets = new UINT32[includedTextures.size()];
+	
+	for (UINT32 i = 0; i < includedTextures.size(); i++)
+	{
+		bspFile->SeekI((long)includedTextures[i].Offset, wxFromStart);
+		UINT8 *texture = new UINT8[includedTextures[i].Size];
+		bspFile->Read(texture, includedTextures[i].Size);
+		outputWadOffsets[i] = wadFile->TellO();
+		wadFile->Write(texture, includedTextures[i].Size);
+		delete[] texture;
+	}
+	
+	// Write lump infos
+	UINT32 posLumps = wadFile->TellO();
+	wadFile->SeekO(8, wxFromStart);
+	BIN::WriteUInt32(wadFile, posLumps);
+	wadFile->SeekO(posLumps, wxFromStart);
+	
+	for (UINT32 i = 0; i < includedTextures.size(); i++)
+	{
+		BIN::WriteUInt32(wadFile, outputWadOffsets[i]); // offset
+		BIN::WriteUInt32(wadFile, includedTextures[i].Size); // compressed length
+		BIN::WriteUInt32(wadFile, includedTextures[i].Size); // full length
+		BIN::WriteUInt8(wadFile, 0x43); // type
+		BIN::WriteUInt8(wadFile, 0); // compression
+		
+		// Padding 2-bytes
+		BIN::WriteUInt8(wadFile, 0);
+		BIN::WriteUInt8(wadFile, 0);
+		
+		wadFile->Write(includedTextures[i].Name.c_str(), MaxNameLength); // name
+	}
+	
+	delete[] buffer;
+	delete[] outputWadOffsets;
+	delete bspFile;
+	delete wadFile;
+	
+	wxString szNumTextures = wxString::Format("Extracted %lu textures.", includedTextures.size());
+	wxMessageBox(szNumTextures, "Extraction successful", wxOK | wxICON_INFORMATION);
+	
+	return (int)includedTextures.size();
 }

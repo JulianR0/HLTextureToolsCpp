@@ -5,6 +5,8 @@
 #include <wx/palette.h>
 #include <wx/rawbmp.h>
 
+#include "binaryIO.h"
+
 #ifdef linux
 #include "linux.h"
 #endif

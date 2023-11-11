@@ -24,19 +24,18 @@ std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent
 		return frames;
 	}
 
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.Version), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.Type), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.TextFormat), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.BoundingRadius), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.MaxWidth), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.MaxHeight), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.NumFrames), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.BeamLen), 4);
-	sprFile->Read(reinterpret_cast<char*>(&SpriteHeader.SynchType), 4);
-
+	SpriteHeader.Version = BIN::ReadInt32(sprFile);
+	SpriteHeader.Type = (SprType)BIN::ReadInt32(sprFile);
+	SpriteHeader.TextFormat = (SprTextFormat)BIN::ReadInt32(sprFile);
+	SpriteHeader.BoundingRadius = BIN::ReadFloat(sprFile);
+	SpriteHeader.MaxWidth = BIN::ReadInt32(sprFile);
+	SpriteHeader.MaxHeight = BIN::ReadInt32(sprFile);
+	SpriteHeader.NumFrames = BIN::ReadInt32(sprFile);
+	SpriteHeader.BeamLen = BIN::ReadFloat(sprFile);
+	SpriteHeader.SynchType = (SprSynchType)BIN::ReadInt32(sprFile);
+	
 	// Palette length
-	UINT16 u;
-	sprFile->Read(reinterpret_cast<char*>(&u), 2);
+	UINT16 u = BIN::ReadUInt16(sprFile);
 
 	// Create new palette for bitmap
 	UINT8 *palBytes = new UINT8[u * 3];
@@ -63,12 +62,12 @@ std::vector<Frame> SpriteLoader::LoadFile(std::string filePath, bool transparent
 	for (int i = 0; i < SpriteHeader.NumFrames; i++)
 	{
 		int frameGroup, frameOriginX, frameOriginY, frameWidth, frameHeight;
-		sprFile->Read(reinterpret_cast<char*>(&frameGroup), 4);
-		sprFile->Read(reinterpret_cast<char*>(&frameOriginX), 4);
-		sprFile->Read(reinterpret_cast<char*>(&frameOriginY), 4);
-		sprFile->Read(reinterpret_cast<char*>(&frameWidth), 4);
-		sprFile->Read(reinterpret_cast<char*>(&frameHeight), 4);
-
+		frameGroup = BIN::ReadInt32(sprFile);
+		frameOriginX = BIN::ReadInt32(sprFile);
+		frameOriginY = BIN::ReadInt32(sprFile);
+		frameWidth = BIN::ReadInt32(sprFile);
+		frameHeight = BIN::ReadInt32(sprFile);
+		
 		// Get pixelsize
 		UINT32 pixelSize = (UINT32)(frameWidth * frameHeight);
 
