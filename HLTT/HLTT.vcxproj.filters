@@ -24,6 +24,12 @@
     <ClCompile Include="HLTT.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="binaryIO.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ExtractWAD.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="WAD3Loader.h">
@@ -33,6 +39,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="linux.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="binaryIO.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ExtractWAD.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
