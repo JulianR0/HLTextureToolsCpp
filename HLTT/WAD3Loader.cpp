@@ -319,15 +319,42 @@ int WAD3Loader::ExtractWADFromBSP(std::string inputFile, std::string outputFile)
 				
 				char *textureName = new char[MaxNameLength];
 				memcpy(textureName, buffer + (int)textureOffset, MaxNameLength);
-				std::string nameNulled(textureName);
-				nameNulled += '\0';
 				
-				IncludedBSPTexture texture;
-				texture.Offset = (UINT32)textureOffset;
-				texture.Size = 0;
-				texture.Name = nameNulled;
+				// might catch garbage data, check texture integrity
+				bool VALID = true;
+				for (int c = 0; c < MaxNameLength; c++)
+				{
+					if (textureName[c] == 0) break;
+					
+					if (textureName[c] < 33 || textureName[c] > 126)
+					{
+						VALID = false;
+						break;
+					}
+				}
 				
-				includedTextures.push_back(texture);
+				if ((num1int % 8) != 0 || (num2int % 8) != 0)
+				{
+					// Width or Height not divisible by 8
+					VALID = false;
+				}
+				
+				if (VALID)
+				{
+					std::string nameNulled(textureName);
+					nameNulled += '\0';
+					
+					// don't snatch RAD lightdata
+					if (nameNulled.find("__rad") == std::string::npos)
+					{
+						IncludedBSPTexture texture;
+						texture.Offset = (UINT32)textureOffset;
+						texture.Size = 0;
+						texture.Name = nameNulled;
+						
+						includedTextures.push_back(texture);
+					}
+				}
 				
 				delete[] textureName;
 			}

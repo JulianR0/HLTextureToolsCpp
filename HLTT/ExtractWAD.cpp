@@ -8,10 +8,10 @@ ExtractWADForm::ExtractWADForm(wxFrame *parent, wxWindowID id, const wxString &t
 	wxBoxSizer *wadSizer = new wxBoxSizer(wxVERTICAL);
 	
 	wxStaticText *inputLabel = new wxStaticText(this, wxID_ANY, "BSP file to extract from:");
-	inputFile = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, "Select a file", "*.*", wxDefaultPosition, wxDefaultSize, wxFLP_OPEN | wxFLP_FILE_MUST_EXIST | wxFLP_USE_TEXTCTRL);
+	inputFile = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, "Select a file", "HL BSP Files|*.bsp", wxDefaultPosition, wxDefaultSize, wxFLP_OPEN | wxFLP_FILE_MUST_EXIST | wxFLP_USE_TEXTCTRL);
 	
 	wxStaticText *outputLabel = new wxStaticText(this, wxID_ANY, "Where to save WAD file:");
-	outputFile = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, "Select a file", "*.*", wxDefaultPosition, wxDefaultSize, wxFLP_SAVE | wxFLP_OVERWRITE_PROMPT | wxFLP_USE_TEXTCTRL);
+	outputFile = new wxFilePickerCtrl(this, wxID_ANY, wxEmptyString, "Select a file", "HL WAD Files|*.wad", wxDefaultPosition, wxDefaultSize, wxFLP_SAVE | wxFLP_OVERWRITE_PROMPT | wxFLP_USE_TEXTCTRL);
 	
 	wxButton *extractButton = new wxButton(this, BUTTON_Extract, "Extract");
 	Bind(wxEVT_BUTTON, &ExtractWADForm::ExtractButtonClick, this, BUTTON_Extract);
