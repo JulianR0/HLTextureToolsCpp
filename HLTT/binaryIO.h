@@ -32,4 +32,13 @@ namespace BIN
 	void WriteInt8(wxFileOutputStream *stream, INT8 value);
 	void WriteInt16(wxFileOutputStream *stream, INT16 value);
 	void WriteInt32(wxFileOutputStream *stream, INT32 value);
+
+	// BitConverter
+	INT32 ToInt32(UINT8 *data);
+
+	inline bool IsLittleEndian()
+	{
+		volatile unsigned int i = 0x01234567;
+		return (*((unsigned char*)(&i))) == 0x67;
+	}
 }

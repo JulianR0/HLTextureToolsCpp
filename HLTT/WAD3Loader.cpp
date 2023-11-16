@@ -289,14 +289,10 @@ int WAD3Loader::ExtractWADFromBSP(std::string inputFile, std::string outputFile)
 		memcpy(num3, buffer + i + 18 + 4 * 2, 4);
 		memcpy(num4, buffer + i + 18 + 4 * 3, 4);
 		
-		// TODO: this should consider big endian.
-		// currently, Xash is the only engine capable of running HL on ARM machines (needs confirmation)
-		// this will only work on little endian machines for the time being.
-		// TODO: maybe move this to its own function, it looks ugly here.
-		int num1int = ((int)num1[3] << 24) | ((int)num1[2] << 16) | ((int)num1[1] << 8) | ((int)num1[0]); // width
-		int num2int = ((int)num2[3] << 24) | ((int)num2[2] << 16) | ((int)num2[1] << 8) | ((int)num2[0]); // height
-		int num3int = ((int)num3[3] << 24) | ((int)num3[2] << 16) | ((int)num3[1] << 8) | ((int)num3[0]); // > 0 for custom wad
-		int num4int = ((int)num4[3] << 24) | ((int)num4[2] << 16) | ((int)num4[1] << 8) | ((int)num4[0]); // > 0 for custom wad
+		int num1int = BIN::ToInt32(num1); // width
+		int num2int = BIN::ToInt32(num2); // height
+		int num3int = BIN::ToInt32(num3); // > 0 for custom wad
+		int num4int = BIN::ToInt32(num4); // > 0 for custom wad
 		
 		if (nullByte2 < 2 &&
 			firstNameByte > 32 && firstNameByte < 127 &&

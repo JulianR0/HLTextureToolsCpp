@@ -23,4 +23,17 @@ namespace BIN
 	void WriteInt8(wxFileOutputStream *stream, INT8 value) { stream->Write(reinterpret_cast<const char*>(&value), 1); }
 	void WriteInt16(wxFileOutputStream *stream, INT16 value) { stream->Write(reinterpret_cast<const char*>(&value), 2); }
 	void WriteInt32(wxFileOutputStream *stream, INT32 value) { stream->Write(reinterpret_cast<const char*>(&value), 4); }
+
+	// BitConverter
+	INT32 ToInt32(UINT8 *data)
+	{
+		INT32 retValue = 0;
+		
+		if (IsLittleEndian())
+			retValue = ((int)data[3] << 24) | ((int)data[2] << 16) | ((int)data[1] << 8) | ((int)data[0]);
+		else
+			retValue = ((int)data[0] << 24) | ((int)data[1] << 16) | ((int)data[2] << 8) | ((int)data[3]);
+
+		return retValue;
+	}
 }

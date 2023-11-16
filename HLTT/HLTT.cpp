@@ -64,7 +64,9 @@ enum // WindowID
 
 enum // MenuID
 {
-	MENU_Animate = 20,
+	MENU_Extract = 20,
+	MENU_ExtractAll,
+	MENU_Animate,
 	MENU_Transparent,
 	MENU_ExtractBSP
 };
@@ -82,6 +84,7 @@ public:
 	wxListBox *listBox;
 	ImageBox *imageBox;
 
+	wxMenu *menuFile;
 	wxMenu *menuImage;
 	wxMenu *menuSettings;
 	wxMenu *menuTools;
@@ -94,6 +97,9 @@ private:
 	void OnExit(wxCommandEvent& event);
 	void ListBoxChanged(wxCommandEvent& event);
 	
+	// File
+	void ExtractImage(wxCommandEvent& event);
+
 	// Image
 	void AnimateSprite(wxCommandEvent& event);
 	
@@ -113,11 +119,16 @@ bool System::OnInit()
 
 MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxDefaultPosition, wxSize(960, 544))
 {
-	wxMenu *menuFile = new wxMenu;
+	menuFile = new wxMenu;
 	menuFile->Append(wxID_OPEN);
 	menuFile->AppendSeparator();
+	menuFile->Append(MENU_Extract, "Extract", "Extract selected texture as BMP image");
+	menuFile->Append(MENU_ExtractAll, "Extract all", "Extracts all textures as BMP images");
+	menuFile->AppendSeparator();
 	menuFile->Append(wxID_EXIT);
-	
+	menuFile->Enable(MENU_Extract, false);
+	menuFile->Enable(MENU_ExtractAll, false);
+
 	menuImage = new wxMenu;
 	menuImage->Append(MENU_Animate, "Animation Play/Stop\tF5", "Animate the sprite");
 	menuImage->Enable(MENU_Animate, false);
@@ -140,6 +151,7 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxD
 
 	Bind(wxEVT_MENU, &MainForm::OnOpen, this, wxID_OPEN);
 	Bind(wxEVT_MENU, &MainForm::OnExit, this, wxID_EXIT);
+	Bind(wxEVT_MENU, &MainForm::ExtractImage, this, MENU_Extract);
 	Bind(wxEVT_MENU, &MainForm::AnimateSprite, this, MENU_Animate);
 	Bind(wxEVT_MENU, &MainForm::ToggleTransparency, this, MENU_Transparent);
 	Bind(wxEVT_MENU, &MainForm::ExtractFromBSP, this, MENU_ExtractBSP);
@@ -196,6 +208,7 @@ void MainForm::OnOpen(wxCommandEvent& event)
 	}
 
 	listBox->Clear();
+	menuFile->Enable(MENU_Extract, true);
 
 	if (isWAD && g_WAD.LoadFile(openDialog.GetPath().utf8_string()))
 	{
@@ -278,7 +291,23 @@ void MainForm::ExtractFromBSP(wxCommandEvent& event)
 {
 	ExtractWADForm *form = new ExtractWADForm((wxFrame*)this, wxID_ANY, "Extract embedded WAD textures from BSP", wxDefaultPosition, wxSize(568, 300));
 	form->ShowModal();
-	//form->Destroy();
+}
+
+void MainForm::ExtractImage(wxCommandEvent& event)
+{
+	if (imageBox->lumpImage != nullptr)
+	{
+		if (imageBox->lumpImage->IsOk())
+		{
+			wxFileDialog saveDialog(this, "Extract to", wxEmptyString, listBox->GetString((UINT32)listBox->GetSelection()), "BMP Image | *.bmp", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+
+			if (saveDialog.ShowModal() == wxID_CANCEL)
+				return;
+			
+			if (!imageBox->lumpImage->SaveFile(saveDialog.GetPath(), wxBITMAP_TYPE_BMP))
+				wxMessageBox("Unable to extract image. (Write failure)", "Error", wxOK | wxICON_ERROR);
+		}
+	}
 }
 
 void ImageBox::OnPaint(wxPaintEvent& event)

@@ -77,15 +77,15 @@
     <ClCompile Include="HLTT.cpp" />
     <ClCompile Include="SpriteLoader.cpp" />
     <ClCompile Include="WAD3Loader.cpp" />
-	<ClCompile Include="binaryIO.cpp" />
-	<ClCompile Include="ExtractWAD.cpp" />
+    <ClCompile Include="binaryIO.cpp" />
+    <ClCompile Include="ExtractWAD.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="linux.h" />
     <ClInclude Include="SpriteLoader.h" />
     <ClInclude Include="WAD3Loader.h" />
-	<ClInclude Include="binaryIO.h" />
-	<ClInclude Include="ExtractWAD.h" />
+    <ClInclude Include="binaryIO.h" />
+    <ClInclude Include="ExtractWAD.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
