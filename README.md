@@ -17,7 +17,8 @@ Currently, the tool can do the following:
 - [X] Animate sprites.
 - [X] Show transparent textures (Starting with '{') and transparent sprites (Alphatest only).
 - [X] Extract WAD from BSP.
-- [ ] Extract textures from WAD.
+- [X] Extract textures from WAD.
+- [X] Extract sprite frames.
 - [ ] Create new WADs.
 - [ ] Create new Sprites.
 - [ ] Edit color palette.

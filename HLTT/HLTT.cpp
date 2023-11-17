@@ -65,7 +65,9 @@ enum // WindowID
 enum // MenuID
 {
 	MENU_Extract = 20,
-	MENU_ExtractAll,
+	MENU_ExtractAllBMP,
+	MENU_ExtractAllPNG,
+	MENU_ExtractAllJPEG,
 	MENU_Animate,
 	MENU_Transparent,
 	MENU_ExtractBSP
@@ -85,6 +87,7 @@ public:
 	ImageBox *imageBox;
 
 	wxMenu *menuFile;
+	wxMenu *submenuExtractAll;
 	wxMenu *menuImage;
 	wxMenu *menuSettings;
 	wxMenu *menuTools;
@@ -99,6 +102,7 @@ private:
 	
 	// File
 	void ExtractImage(wxCommandEvent& event);
+	void ExtractAllImages(wxCommandEvent& event);
 
 	// Image
 	void AnimateSprite(wxCommandEvent& event);
@@ -112,6 +116,10 @@ private:
 
 bool System::OnInit()
 {
+	//wxImage::AddHandler(new wxBMPHandler); // always installed
+	wxImage::AddHandler(new wxPNGHandler);
+	wxImage::AddHandler(new wxJPEGHandler);
+	
 	MainForm *main = new MainForm();
 	main->Show();
 	return true;
@@ -122,12 +130,20 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxD
 	menuFile = new wxMenu;
 	menuFile->Append(wxID_OPEN);
 	menuFile->AppendSeparator();
-	menuFile->Append(MENU_Extract, "Extract", "Extract selected texture as BMP image");
-	menuFile->Append(MENU_ExtractAll, "Extract all", "Extracts all textures as BMP images");
+	menuFile->Append(MENU_Extract, "Extract\tCtrl+S", "Extract selected texture/sprite frame");
+	
+	submenuExtractAll = new wxMenu;
+	submenuExtractAll->Append(MENU_ExtractAllBMP, "As BMP", "Extracts all textures/sprite frames as BMP images");
+	submenuExtractAll->Append(MENU_ExtractAllPNG, "As PNG", "Extracts all textures/sprite frames as PNG images");
+	submenuExtractAll->Append(MENU_ExtractAllJPEG, "As JPEG", "Extracts all textures/sprite frames as JPEG images");
+	menuFile->AppendSubMenu(submenuExtractAll, "Extract all", wxEmptyString);
+	
 	menuFile->AppendSeparator();
 	menuFile->Append(wxID_EXIT);
 	menuFile->Enable(MENU_Extract, false);
-	menuFile->Enable(MENU_ExtractAll, false);
+	menuFile->Enable(MENU_ExtractAllBMP, false);
+	menuFile->Enable(MENU_ExtractAllPNG, false);
+	menuFile->Enable(MENU_ExtractAllJPEG, false);
 
 	menuImage = new wxMenu;
 	menuImage->Append(MENU_Animate, "Animation Play/Stop\tF5", "Animate the sprite");
@@ -152,6 +168,9 @@ MainForm::MainForm() : wxFrame(nullptr, wxID_ANY, "Half-Life Texture Tools", wxD
 	Bind(wxEVT_MENU, &MainForm::OnOpen, this, wxID_OPEN);
 	Bind(wxEVT_MENU, &MainForm::OnExit, this, wxID_EXIT);
 	Bind(wxEVT_MENU, &MainForm::ExtractImage, this, MENU_Extract);
+	Bind(wxEVT_MENU, &MainForm::ExtractAllImages, this, MENU_ExtractAllBMP);
+	Bind(wxEVT_MENU, &MainForm::ExtractAllImages, this, MENU_ExtractAllPNG);
+	Bind(wxEVT_MENU, &MainForm::ExtractAllImages, this, MENU_ExtractAllJPEG);
 	Bind(wxEVT_MENU, &MainForm::AnimateSprite, this, MENU_Animate);
 	Bind(wxEVT_MENU, &MainForm::ToggleTransparency, this, MENU_Transparent);
 	Bind(wxEVT_MENU, &MainForm::ExtractFromBSP, this, MENU_ExtractBSP);
@@ -209,6 +228,9 @@ void MainForm::OnOpen(wxCommandEvent& event)
 
 	listBox->Clear();
 	menuFile->Enable(MENU_Extract, true);
+	menuFile->Enable(MENU_ExtractAllBMP, true);
+	menuFile->Enable(MENU_ExtractAllPNG, true);
+	menuFile->Enable(MENU_ExtractAllJPEG, true);
 
 	if (isWAD && g_WAD.LoadFile(openDialog.GetPath().utf8_string()))
 	{
@@ -299,13 +321,107 @@ void MainForm::ExtractImage(wxCommandEvent& event)
 	{
 		if (imageBox->lumpImage->IsOk())
 		{
-			wxFileDialog saveDialog(this, "Extract to", wxEmptyString, listBox->GetString((UINT32)listBox->GetSelection()), "BMP Image | *.bmp", wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
+			const UINT32 uiSelection = (UINT32)listBox->GetSelection();
+			
+			std::string fileFilters;
+			fileFilters = "BMP Image|*.bmp";
+			fileFilters += "|PNG Image|*.png";
+			fileFilters += "|JPEG Image|*.jpeg";
+			
+			wxFileDialog saveDialog(this, "Extract to", wxEmptyString, listBox->GetString(uiSelection), fileFilters, wxFD_SAVE | wxFD_OVERWRITE_PROMPT);
 
 			if (saveDialog.ShowModal() == wxID_CANCEL)
 				return;
 			
-			if (!imageBox->lumpImage->SaveFile(saveDialog.GetPath(), wxBITMAP_TYPE_BMP))
+			std::string extCheck = saveDialog.GetPath().utf8_string();
+			
+			wxBitmapType TYPE;
+			if (extCheck.rfind(".bmp") != std::string::npos)
+				TYPE = wxBITMAP_TYPE_BMP;
+			else if (extCheck.rfind(".png") != std::string::npos)
+				TYPE = wxBITMAP_TYPE_PNG;
+			else if (extCheck.rfind(".jpeg") != std::string::npos)
+				TYPE = wxBITMAP_TYPE_JPEG;
+			else
+			{
+				wxMessageBox("Invalid file type.", "Error", wxOK | wxICON_ERROR);
+				return;
+			}
+			
+			bool result = false;
+			if (fileType == FILE_Wad)
+				result = g_WAD.GetLumpImage(uiSelection, false)->SaveFile(saveDialog.GetPath(), TYPE);
+			else if (fileType == FILE_Sprite)
+			{
+				std::vector<Frame> sprite = g_SPR.LoadFile(g_SPR.Filename, false);
+				wxBitmap* image = sprite[uiSelection].Image;
+				if (image != nullptr)
+				{
+					if (image->IsOk())
+						result = image->SaveFile(saveDialog.GetPath(), TYPE);
+				}
+			}
+			
+			if (!result)
 				wxMessageBox("Unable to extract image. (Write failure)", "Error", wxOK | wxICON_ERROR);
+		}
+	}
+}
+
+void MainForm::ExtractAllImages(wxCommandEvent& event)
+{
+	wxDirDialog saveDialog(this, "Extract to folder", wxEmptyString, wxDD_DEFAULT_STYLE);
+
+	if (saveDialog.ShowModal() == wxID_CANCEL)
+		return;
+	
+	const std::string destFolder = saveDialog.GetPath().utf8_string() + "/";
+	
+	if (fileType == FILE_Wad)
+	{
+		for (UINT32 i = 0; i < g_WAD.LumpsInfo.size(); i++)
+		{
+			wxBitmap* image = g_WAD.GetLumpImage(i, false);
+			if (image != nullptr)
+			{
+				if (image->IsOk())
+				{
+					// null terminator on name it's getting on the way
+					std::string textureName = g_WAD.LumpsInfo[i].Name; textureName.resize(textureName.length() - 1);
+					
+					switch (event.GetId())
+					{
+						case MENU_ExtractAllBMP: image->SaveFile(destFolder + textureName + ".bmp", wxBITMAP_TYPE_BMP); break;
+						case MENU_ExtractAllPNG: image->SaveFile(destFolder + textureName + ".png", wxBITMAP_TYPE_PNG); break;
+						case MENU_ExtractAllJPEG: image->SaveFile(destFolder + textureName + ".jpeg", wxBITMAP_TYPE_JPEG); break;
+					}
+				}
+			}
+		}
+	}
+	else if (fileType == FILE_Sprite)
+	{
+		std::vector<Frame> sprite = g_SPR.LoadFile(g_SPR.Filename, false);
+		
+		for (UINT32 i = 0; i < sprite.size(); i++)
+		{
+			wxBitmap* image = sprite[i].Image;
+			if (image != nullptr)
+			{
+				if (image->IsOk())
+				{
+					char temp[12];
+					sprintf(temp, "Frame #%i", i);
+					std::string szFrame = temp;
+					
+					switch (event.GetId())
+					{
+						case MENU_ExtractAllBMP: image->SaveFile(destFolder + szFrame + ".bmp", wxBITMAP_TYPE_BMP); break;
+						case MENU_ExtractAllPNG: image->SaveFile(destFolder + szFrame + ".png", wxBITMAP_TYPE_PNG); break;
+						case MENU_ExtractAllJPEG: image->SaveFile(destFolder + szFrame + ".jpeg", wxBITMAP_TYPE_JPEG); break;
+					}
+				}
+			}
 		}
 	}
 }
